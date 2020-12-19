@@ -13,25 +13,39 @@ export function beginGame() {
   }
 
   const initSnakeBody = () => {
-    for (let i = 0; i < 399; i++) {
-      if (i === 0 || i === 1) {
+    if (snake.length) {
+      for (let i = 0; i < 399; i++) {
+        if (i === 0 || i === 1) {
+          snake[i].bg = 'b-c-purple'
+          continue
+        }
+        if (i === 2) {
+          snake[i].bg = 'b-c-pink'
+          continue
+        }
+        snake[i].bg = ''
+      }
+    } else {
+      for (let i = 0; i < 399; i++) {
+        if (i === 0 || i === 1) {
+          snake.push({
+            id: i,
+            bg: 'b-c-purple'
+          })
+          continue
+        }
+        if (i === 2) {
+          snake.push({
+            id: i,
+            bg: 'b-c-pink'
+          })
+          continue
+        }
         snake.push({
           id: i,
-          bg: 'b-c-purple'
+          bg: ''
         })
-        continue
       }
-      if (i === 2) {
-        snake.push({
-          id: i,
-          bg: 'b-c-pink'
-        })
-        continue
-      }
-      snake.push({
-        id: i,
-        bg: ''
-      })
     }
   }
 
@@ -81,7 +95,11 @@ export function beginGame() {
       id += num
     }
 
-    if (id < 0 || snakePoor.slice(0, snakePoor.length - 2).includes(id)) {
+    if (
+      id < 0 ||
+      id > 300 ||
+      snakePoor.slice(0, snakePoor.length - 2).includes(id)
+    ) {
       endGame()
       return
     }
@@ -140,7 +158,6 @@ export function beginGame() {
     eatenFood,
     randomNum,
     snakePoor,
-    changeDirection,
-    clearTime
+    changeDirection
   }
 }
