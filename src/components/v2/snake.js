@@ -14,7 +14,7 @@ export function beginGame() {
 
   const initSnakeBody = () => {
     if (snake.length) {
-      for (let i = 0; i < 399; i++) {
+      for (let i = 0; i < 400; i++) {
         if (i === 0 || i === 1) {
           snake[i].bg = 'b-c-purple'
           continue
@@ -26,7 +26,7 @@ export function beginGame() {
         snake[i].bg = ''
       }
     } else {
-      for (let i = 0; i < 399; i++) {
+      for (let i = 0; i < 400; i++) {
         if (i === 0 || i === 1) {
           snake.push({
             id: i,
@@ -95,11 +95,7 @@ export function beginGame() {
       id += num
     }
 
-    if (
-      id < 0 ||
-      id > 300 ||
-      snakePoor.slice(0, snakePoor.length - 2).includes(id)
-    ) {
+    if (endCondition(id)) {
       endGame()
       return
     }
@@ -139,7 +135,22 @@ export function beginGame() {
       randomNum.value = getRandom(400)
       eatenFood.value = 0
       keyCodeStorage = 0
+      snakePoor.splice(0, snakePoor.length, ...[0, 1, 2])
     })
+  }
+
+  const endCondition = id => {
+    const initId = snakePoor[snakePoor.length - 1]
+    if (
+      (initId % 20 === 0 && (id - 19) % 20 === 0) ||
+      (id % 20 === 0 && (initId - 19) % 20 === 0)
+    )
+      return true
+    return (
+      id < 0 ||
+      id > 399 ||
+      snakePoor.slice(0, snakePoor.length - 2).includes(id)
+    )
   }
 
   window.addEventListener('keydown', changeDirection, true)

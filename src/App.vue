@@ -30,6 +30,13 @@ export default {
       this.componentId = v
       localStorage.setItem('v', v)
     }
+  },
+  mounted() {
+    const width = document.body.clientWidth
+    console.log(width)
+    if (width < 410) {
+      document.querySelector('.box').style.zoom = (width / 410).toFixed(2)
+    }
   }
 }
 </script>
