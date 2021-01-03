@@ -6,8 +6,8 @@
 
   <div class="m-10">{{ componentId }}</div>
 
-  <v1 v-if="componentId === 'v1'" />
-  <v2 v-else />
+  <v1 :zoom="zoom" v-if="componentId === 'v1'" />
+  <v2 :zoom="zoom" v-else />
 </template>
 
 <script>
@@ -22,7 +22,8 @@ export default {
   },
   data() {
     return {
-      componentId: localStorage.getItem('v') || 'v1'
+      componentId: localStorage.getItem('v') || 'v1',
+      zoom: 1
     }
   },
   methods: {
@@ -31,11 +32,11 @@ export default {
       localStorage.setItem('v', v)
     }
   },
-  mounted() {
+  created() {
     const width = document.body.clientWidth
-    console.log(width)
+
     if (width < 410) {
-      document.querySelector('.box').style.zoom = (width / 410).toFixed(2)
+      this.zoom = (width / 410).toFixed(2)
     }
   }
 }

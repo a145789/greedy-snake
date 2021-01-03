@@ -134,14 +134,11 @@ export function beginGame() {
 
   window.addEventListener('keydown', changeDirection, true)
 
-  function clearTime() {
-    if (timer) clearInterval(timer)
-  }
-
   onBeforeUnmount(() => {
     console.log('v1注销')
-    window.removeEventListener('keydown', clearTime())
+    if (timer) clearInterval(timer)
+    window.removeEventListener('keydown', changeDirection)
   })
 
-  return { snake, eatenFood, randomNum, changeDirection, clearTime }
+  return { snake, eatenFood, randomNum, changeDirection }
 }

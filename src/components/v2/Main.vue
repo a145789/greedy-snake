@@ -1,5 +1,5 @@
 <template>
-  <div class="box">
+  <div class="box" :style="`zoom:${zoom}`">
     <ul class="container">
       <li
         v-for="(item, index) of snake"
@@ -16,11 +16,19 @@
     }}
   </div>
 
-  <div class="arrow">
-    <div class="top" @click="changeDirection({ keyCode: 38 })">↑</div>
-    <div class="right" @click="changeDirection({ keyCode: 39 })">→</div>
-    <div class="down" @click="changeDirection({ keyCode: 40 })">↓</div>
-    <div class="left" @click="changeDirection({ keyCode: 37 })">←</div>
+  <div class="arrow" v-if="zoom !== 1">
+    <div class="top" v-tap="{ fn: changeDirection, params: { keyCode: 38 } }">
+      ↑
+    </div>
+    <div class="right" v-tap="{ fn: changeDirection, params: { keyCode: 39 } }">
+      →
+    </div>
+    <div class="down" v-tap="{ fn: changeDirection, params: { keyCode: 40 } }">
+      ↓
+    </div>
+    <div class="left" v-tap="{ fn: changeDirection, params: { keyCode: 37 } }">
+      ←
+    </div>
   </div>
 </template>
 
@@ -29,6 +37,9 @@ import { beginGame } from './snake.js'
 
 export default {
   name: 'V2',
+  props: {
+    zoom: Number
+  },
   setup() {
     const {
       snake,
