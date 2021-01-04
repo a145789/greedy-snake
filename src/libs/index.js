@@ -3,7 +3,7 @@ function hslToRgb(H, S, L) {
   if (+S === 0) {
     R = G = B = L // 饱和度为0 为灰色
   } else {
-    var hue2Rgb = function (p, q, t) {
+    var hue2Rgb = function(p, q, t) {
       if (t < 0) t += 1
       if (t > 1) t -= 1
       if (t < 1 / 6) return p + (q - p) * 6 * t
@@ -40,7 +40,7 @@ export function getColor() {
   ret[1] = 0.7 + ret[1] * 0.2 // [0.7 - 0.9] 排除过灰颜色
   ret[2] = 0.4 + ret[2] * 0.4 // [0.4 - 0.8] 排除过亮过暗色
   // 数据转化到小数点后两位
-  ret = ret.map(function (item) {
+  ret = ret.map(function(item) {
     return parseFloat(item.toFixed(2))
   })
   return hslToRgb(...ret)
