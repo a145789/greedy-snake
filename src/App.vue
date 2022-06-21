@@ -10,40 +10,20 @@
     </div>
   </div>
 
-  <v1 :zoom="zoom" v-if="componentId === 1" />
-  <v2 :zoom="zoom" v-else-if="componentId === 2" />
-  <v3 :zoom="zoom" v-else />
+  <Normal />
 </template>
 
-<script>
-import V1 from './components/v1/Main.vue'
-import V2 from './components/v2/Main.vue'
-import V3 from './components/v3/Main.vue'
+<script lang="ts">
+import Normal from './components/normal/Main.vue'
 
 export default {
   name: 'App',
   components: {
-    V1,
-    V2,
-    V3
+    Normal
   },
   data() {
     return {
-      componentId: Number(localStorage.getItem('v')) || 3,
-      zoom: 1
-    }
-  },
-  methods: {
-    select(v) {
-      this.componentId = v
-      localStorage.setItem('v', v)
-    }
-  },
-  created() {
-    const width = document.body.clientWidth
-
-    if (width < 410) {
-      this.zoom = (width / 410).toFixed(2)
+      componentId: Number(localStorage.getItem('v')) || 3
     }
   }
 }

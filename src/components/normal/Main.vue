@@ -1,55 +1,42 @@
 <template>
-  <div class="box" :style="`zoom:${zoom}`">
+  <div class="box">
     <ul class="container">
       <li
-        v-for="item of 400"
-        :key="item"
+        v-for="(item, index) of snake"
+        :key="index"
         class="point"
-        :class="randomNum === item - 1 ? 'b-c-0' : ''"
+        :class="item.bg"
       />
     </ul>
-
-    <ul class="snake">
-      <li
-        v-for="(item, index) of snake"
-        :key="item.id"
-        :style="'top:' + item.top + 'px;left:' + item.left + 'px'"
-        :class="index + 1 === snake.length ? 'b-c-pink' : 'b-c-purple'"
-      ></li>
-    </ul>
   </div>
-  <div>身体长度：{{ snake.length }} | 吃掉的食物：{{ eatenFood }}</div>
+  <div>身体长度：{{ snakePoor.length }} | 吃掉的食物：{{ eatenFood }}</div>
   <div>
-    FoodOptions：{{ randomNum }} | snake头部：{{ snake[snake.length - 1].id }}
+    FoodOptions：{{ randomNum }} | snake头部：{{
+      snakePoor[snakePoor.length - 1]
+    }}
   </div>
 
-  <div class="arrow" v-if="zoom !== 1">
-    <div class="top" @click="changeDirection({ keyCode: 38 })">↑</div>
-    <div class="right" @click="changeDirection({ keyCode: 39 })">→</div>
-    <div class="down" @click="changeDirection({ keyCode: 40 })">↓</div>
-    <div class="left" @click="changeDirection({ keyCode: 37 })">←</div>
+  <div class="arrow">
+    <div class="top" v-tap="{ fn: changeDirection, params: { keyCode: 38 } }">
+      ↑
+    </div>
+    <div class="right" v-tap="{ fn: changeDirection, params: { keyCode: 39 } }">
+      →
+    </div>
+    <div class="down" v-tap="{ fn: changeDirection, params: { keyCode: 40 } }">
+      ↓
+    </div>
+    <div class="left" v-tap="{ fn: changeDirection, params: { keyCode: 37 } }">
+      ←
+    </div>
   </div>
 </template>
 
-<script>
-import { beginGame } from './snake.js'
+<script lang="ts" setup>
+import { beginGame } from './snake'
+import vTap from '../../directive/tap'
 
-export default {
-  name: 'V1',
-  props: {
-    zoom: Number
-  },
-  setup() {
-    const { snake, eatenFood, randomNum, changeDirection } = beginGame()
-
-    return {
-      randomNum,
-      snake,
-      eatenFood,
-      changeDirection
-    }
-  }
-}
+const { snake, eatenFood, randomNum, changeDirection, snakePoor } = beginGame()
 </script>
 
 <style>
