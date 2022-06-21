@@ -42,8 +42,8 @@ const { snake, eatenFood, randomNum, changeDirection, snakePoor } = beginGame()
 <style>
 .box {
   position: relative;
-  height: 400px;
-  width: 400px;
+  height: 300px;
+  width: 300px;
   border: 4px solid #ededed;
   margin: auto;
 }
@@ -85,7 +85,7 @@ ul li {
   position: relative;
   margin: 40px auto;
   height: 200px;
-  width: 400px;
+  width: 300px;
 }
 .arrow div {
   position: absolute;

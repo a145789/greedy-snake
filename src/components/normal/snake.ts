@@ -13,7 +13,7 @@ function getRandom(max, snake) {
 
 const initSnakeBody = () => {
   const snake = []
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 300; i++) {
     if (i === 0 || i === 1) {
       snake.push({
         id: i,
@@ -40,7 +40,7 @@ export function beginGame() {
   let snake = reactive(initSnakeBody())
   let snakePoor = reactive([0, 1, 2])
 
-  let randomNum = ref(getRandom(400, snake))
+  let randomNum = ref(getRandom(300, snake))
 
   const directionPoor = reactive([])
   let trap = false
@@ -121,7 +121,7 @@ export function beginGame() {
     snake[i].bg = 'b-c-purple'
     snakePoor.unshift(i)
 
-    randomNum.value = getRandom(400, snake)
+    randomNum.value = getRandom(300, snake)
   }
 
   const endGame = () => {
@@ -129,8 +129,8 @@ export function beginGame() {
     timer = null
     nextTick(() => {
       alert('游戏结束')
-      snake.splice(0, 400, ...initSnakeBody())
-      randomNum.value = getRandom(400, snake)
+      snake.splice(0, 300, ...initSnakeBody())
+      randomNum.value = getRandom(300, snake)
       eatenFood.value = 0
       snakePoor.splice(0, snakePoor.length, ...[0, 1, 2])
       directionPoor.splice(0, directionPoor.length)
