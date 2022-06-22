@@ -2,7 +2,7 @@ export default {
   mounted(el, { value: { fn, params }, modifiers }) {
     const dep = init(fn, params, modifiers)
 
-    Object.keys(dep).forEach(key => {
+    Object.keys(dep).forEach((key) => {
       el[key] = dep[key]
     })
 
@@ -17,45 +17,49 @@ export default {
     el.removeEventListener('touchend', el.touchendFn)
     el.removeEventListener('touchcancel', el.touchcancelFn)
     el.touchstartFn = el.touchmoveFn = el.touchendFn = el.touchcancelFn = null
-  }
+  },
 }
 
 const init = (handler, params, modifiers) => {
   let tapTimeout = null
 
-  let tapInfo = {
+  const tapInfo = {
     x1: null,
     y1: null,
     x2: null,
-    y2: null
+    y2: null,
   }
 
-  const _touchstart = function(evt) {
-    if (!evt.touches) return
+  const _touchstart = function (evt) {
+    if (!evt.touches)
+      return
 
-    var touch = evt.touches[0]
+    const touch = evt.touches[0]
     tapInfo.x1 = touch.pageX
     tapInfo.y1 = touch.pageY
   }
 
-  const _touchmove = function(evt) {
-    if (!evt.touches) return
+  const _touchmove = function (evt) {
+    if (!evt.touches)
+      return
 
-    var touch = evt.touches[0]
+    const touch = evt.touches[0]
     tapInfo.x2 = touch.pageX
     tapInfo.y2 = touch.pageY
   }
 
-  const _touchend = function(evt) {
-    if (!evt.changedTouches) return
+  const _touchend = function (evt) {
+    if (!evt.changedTouches)
+      return
 
     if (
-      (tapInfo.x2 && Math.abx(tapInfo.x1 - tapInfo.x2) > 30) ||
-      (tapInfo.y2 && Math.abx(tapInfo.y1 - tapInfo.y2) > 30)
+      (tapInfo.x2 && Math.abx(tapInfo.x1 - tapInfo.x2) > 30)
+      || (tapInfo.y2 && Math.abx(tapInfo.y1 - tapInfo.y2) > 30)
     ) {
       // swipe
-    } else {
-      tapTimeout = setTimeout(function() {
+    }
+    else {
+      tapTimeout = setTimeout(() => {
         handler(params)
       }, 0)
     }
@@ -63,25 +67,27 @@ const init = (handler, params, modifiers) => {
     tapInfo.x1 = tapInfo.y1 = tapInfo.x2 = tapInfo.y2 = null
   }
 
-  const _touchcancel = function() {
+  const _touchcancel = function () {
     clearTimeout(tapTimeout)
   }
 
-  const touchstartFn = function(e) {
-    if (modifiers.stopPropagation) e.stopPropagation()
-    if (modifiers.preventDefault) e.preventDefault()
+  const touchstartFn = function (e) {
+    if (modifiers.stopPropagation)
+      e.stopPropagation()
+    if (modifiers.preventDefault)
+      e.preventDefault()
     _touchstart(e)
   }
 
-  const touchmoveFn = function(e) {
+  const touchmoveFn = function (e) {
     _touchmove(e)
   }
 
-  const touchendFn = function(e) {
+  const touchendFn = function (e) {
     _touchend(e)
   }
 
-  const touchcancelFn = function(e) {
+  const touchcancelFn = function (e) {
     _touchcancel(e)
   }
 
