@@ -52,7 +52,7 @@ function genFood() {
   let y = Math.floor(Math.random() * 15)
   let x = Math.floor(Math.random() * 15)
 
-  while (isSpaceInSnake(y, x)) {
+  while (!isSpaceNotInSnake(y, x)) {
     y = Math.floor(Math.random() * 15)
     x = Math.floor(Math.random() * 15)
   }
@@ -65,7 +65,7 @@ function isEatFood() {
   return headPosition.y === foodPosition.y && headPosition.x === foodPosition.x
 }
 function snakeRun(newHeadY: number, newHeadX: number) {
-  if (!snakeBox[newHeadY]?.[newHeadX] || isSpaceInSnake(newHeadY, newHeadX)) {
+  if (!isSpaceNotInSnake(newHeadY, newHeadX)) {
     gameOver()
     return
   }
@@ -83,18 +83,18 @@ function snakeRun(newHeadY: number, newHeadX: number) {
     snakeBox[last.y][last.x].bg = SpaceColor.empty
   }
 
-  loopAction()
+  currentStatus === 'manual' ? loopAction() : aiLoopAction()
 }
 
-function isSpaceInSnake(y: number, x: number) {
-  return (y === headPosition.y && x === headPosition.x) || bodyPositions.some(({ y: _y, x: _x }) => y === _y && x === _x)
+function isSpaceNotInSnake(y: number, x: number) {
+  return snakeBox[y]?.[x]?.bg === SpaceColor.empty || snakeBox[y]?.[x]?.bg === SpaceColor.food
 }
 
 let timer: number
 function loopAction() {
   clearInterval(timer)
   timer = setInterval(() => {
-    handle(currentDirection)
+    handle(currentDirection!)
   }, 300)
 }
 function handle(dir: Direction) {
@@ -153,7 +153,6 @@ function eventHandling(type: 'register' | 'unregister') {
     window.removeEventListener('keydown', handleKeyDown)
   }
 }
-
 function manualBeginGame() {
   init()
   currentStatus = 'manual'
@@ -161,10 +160,66 @@ function manualBeginGame() {
   eventHandling('register')
 }
 
+function aiLoopAction() {
+  clearTimeout(timer)
+  timer = setTimeout(() => {
+    aiEventHandle()
+  }, 300)
+}
+function aiEventHandle() {
+  const { y, x } = headPosition
+  const { y: foodY, x: foodX } = foodPosition
+  const arr = []
+  for (let i = 0; i < 4; i++) {
+    switch (i) {
+      case 0:
+        if (isSpaceNotInSnake(y - 1, x)) {
+          arr.push({
+            dir: Direction.up,
+            distance: Math.abs(y - 1 - foodY) + Math.abs(x - foodX),
+          })
+        }
+        break
+      case 1:
+        if (isSpaceNotInSnake(y + 1, x)) {
+          arr.push({
+            dir: Direction.down,
+            distance: Math.abs(y + 1 - foodY) + Math.abs(x - foodX),
+          })
+        }
+        break
+      case 2:
+        if (isSpaceNotInSnake(y, x - 1)) {
+          arr.push({
+            dir: Direction.left,
+            distance: Math.abs(y - foodY) + Math.abs(x - 1 - foodX),
+          })
+        }
+        break
+      case 3:
+        if (isSpaceNotInSnake(y, x + 1)) {
+          arr.push({
+            dir: Direction.right,
+            distance: Math.abs(y - foodY) + Math.abs(x + 1 - foodX),
+          })
+        }
+        break
+
+      default:
+        break
+    }
+  }
+  if (arr.length === 0) {
+    gameOver()
+    return
+  }
+  const { dir } = arr.sort((a, b) => a.distance - b.distance)[0]
+  handle(dir)
+}
 function aStarBeginGame() {
   init()
-
   currentStatus = 'auto'
+  aiEventHandle()
 }
 
 function gameOver() {
@@ -188,6 +243,7 @@ function init() {
   initSpace()
   genSnake()
   genFood()
+
   currentDirection = null
 }
 
