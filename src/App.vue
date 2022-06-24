@@ -6,6 +6,11 @@ import ArrowCircleLeft48Regular from '@vicons/fluent/ArrowCircleLeft48Regular'
 import ArrowCircleRight48Regular from '@vicons/fluent/ArrowCircleRight48Regular'
 import { Icon } from '@vicons/utils'
 
+interface Position {
+  y: number
+  x: number
+}
+
 enum SpaceColor {
   food = 'bg-#415065',
   body = 'bg-#a3e2c5',
@@ -18,6 +23,7 @@ enum Direction {
   down = 'down',
   left = 'left',
   right = 'right',
+  null = 'null',
 }
 
 const IS_USE_TOUCH = 'ontouchstart' in document.documentElement
@@ -27,16 +33,15 @@ type Mode = 'manual' | 'easyAi'
 const snakeBox = $ref(Array.from({ length: 15 }).map(() => Array.from({ length: 15 }).map(() => ({ bg: SpaceColor.empty }))))
 let headPosition = { y: 0, x: 0 }
 
-let bodyPositions = $ref<{ y: number; x: number }[]>([])
+let bodyPositions = $ref<Position[]>([])
 let foodPosition = $ref({ y: 0, x: 0 })
 
-let currentDirection: Direction | null
+let currentDirection: Direction = Direction.null
 let currentMode = $ref<Mode>()
 const timer: {
   [key in Mode]?: number
 } = {}
 let gameStatus = $ref<'pending' | 'playing' | 'over'>('pending')
-
 function genSnake() {
   headPosition = { y: 0, x: 3 }
   snakeBox[headPosition.y][headPosition.x].bg = SpaceColor.head
@@ -77,7 +82,7 @@ function genFood() {
 function manualLoopAction() {
   clearTimeout(timer.manual)
   timer.manual = setTimeout(() => {
-    handle(currentDirection!)
+    handle(currentDirection)
   }, 300)
 }
 function handleKeyDown(e: KeyboardEvent) {
@@ -96,11 +101,11 @@ function handleKeyDown(e: KeyboardEvent) {
       dir = Direction.right
       break
     default:
-      dir = null
+      dir = Direction.null
       break
   }
 
-  if (!dir || dir === currentDirection) {
+  if (dir === Direction.null || dir === currentDirection) {
     return
   }
   handle(dir)
@@ -119,64 +124,82 @@ function manualBeginGame() {
   eventHandling('register')
 }
 
-// easy 模式
+// easy 寻路模式
 function easyAiLoopAction() {
   clearTimeout(timer.easyAi)
   timer.easyAi = setTimeout(() => {
     easyAiEventHandle()
-  }, 300)
+  }, 100)
 }
-function easyAiEventHandle() {
-  const { y, x } = headPosition
-  const { y: foodY, x: foodX } = foodPosition
-  const arr = []
-  for (let i = 0; i < 4; i++) {
-    switch (i) {
-      case 0:
-        if (isSpaceNotInSnake(y - 1, x)) {
-          arr.push({
-            dir: Direction.up,
-            distance: Math.abs(y - 1 - foodY) + Math.abs(x - foodX),
-          })
-        }
-        break
-      case 1:
-        if (isSpaceNotInSnake(y + 1, x)) {
-          arr.push({
-            dir: Direction.down,
-            distance: Math.abs(y + 1 - foodY) + Math.abs(x - foodX),
-          })
-        }
-        break
-      case 2:
-        if (isSpaceNotInSnake(y, x - 1)) {
-          arr.push({
-            dir: Direction.left,
-            distance: Math.abs(y - foodY) + Math.abs(x - 1 - foodX),
-          })
-        }
-        break
-      case 3:
-        if (isSpaceNotInSnake(y, x + 1)) {
-          arr.push({
-            dir: Direction.right,
-            distance: Math.abs(y - foodY) + Math.abs(x + 1 - foodX),
-          })
-        }
-        break
-
-      default:
-        break
+function easyNavigateAi(start: Position, end: Position, closeList: Position[], obstacleList: Position[]) {
+  const { y: startY, x: startX } = start
+  const { y: endY, x: endX } = end
+  const nextList = [
+    {
+      position: { y: startY - 1, x: startX },
+      dir: Direction.up,
+      distance: Math.abs(startY - 1 - endY) + Math.abs(startX - endX),
+    },
+    {
+      position: { y: startY + 1, x: startX },
+      dir: Direction.down,
+      distance: Math.abs(startY + 1 - endY) + Math.abs(startX - endX),
+    },
+    {
+      position: { y: startY, x: startX - 1 },
+      dir: Direction.left,
+      distance: Math.abs(startY - endY) + Math.abs(startX - 1 - endX),
+    },
+    {
+      position: { y: startY, x: startX + 1 },
+      dir: Direction.right,
+      distance: Math.abs(startY - endY) + Math.abs(startX + 1 - endX),
+    },
+  ].filter(({ position }) => snakeBox[position.y]?.[position.x])
+  for (const { y: obstacleY, x: obstacleX } of obstacleList) {
+    const index = nextList.findIndex(({ position }) => position.y === obstacleY && position.x === obstacleX)
+    if (index !== -1) {
+      nextList.splice(index, 1)
     }
   }
-  if (arr.length === 0) {
+  if (nextList.length === 0) {
+    return
+  }
+  const isEndNode = nextList.find(({ distance }) => distance === 0)
+  if (isEndNode) {
+    return isEndNode
+  }
+  nextList.sort((a, b) => b.distance - a.distance)
+
+  let next = nextList.pop()
+  while (next) {
+    const { position } = next
+    if (closeList.some(({ y, x }) => y === position.y && x === position.x)) {
+      next = nextList.pop()
+      continue
+    }
+    closeList.push(position)
+    const obstacleListCopy = [...obstacleList]
+    obstacleListCopy.unshift(position)
+    obstacleListCopy.pop()
+    if (easyNavigateAi(position, end, closeList, obstacleListCopy)) {
+      return next
+    }
+    next = nextList.pop()
+  }
+}
+function easyAiEventHandle() {
+  const closeList: Position[] = []
+  const obstacleList = [...bodyPositions]
+  const next = easyNavigateAi(headPosition, foodPosition, closeList, obstacleList)
+  if (!next) {
     gameOver()
     return
   }
-  const { dir } = arr.sort((a, b) => a.distance - b.distance)[0]
-  handle(dir)
+
+  handle(next.dir)
 }
-function aStarBeginGame() {
+function easyNavigateBeginGame() {
   beginGame()
   currentMode = 'easyAi'
   easyAiEventHandle()
@@ -248,7 +271,7 @@ function beginGame() {
   genFood()
 
   gameStatus = 'playing'
-  currentDirection = null
+  currentDirection = Direction.null
 }
 
 // utils
@@ -284,32 +307,32 @@ onBeforeUnmount(() => {
       <button class="mr-12px" @click="manualBeginGame">
         开始游戏
       </button>
-      <button @click="aStarBeginGame">
-        easy 寻路
+      <button @click="easyNavigateBeginGame">
+        easy ai 寻路
       </button>
     </div>
 
     <div v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH" class="mt-10">
       <div class="flex justify-center">
-        <Icon size="46" @touchstart="handleKeyDown({ key: 'ArrowUp' } as KeyboardEvent)">
+        <Icon size="50" @touchstart="handleKeyDown({ key: 'ArrowUp' } as KeyboardEvent)">
           <ArrowCircleUp48Regular />
         </Icon>
       </div>
       <div class="flex justify-center">
         <Icon
-          size="46"
+          size="50"
           @touchstart="handleKeyDown({ key: 'ArrowLeft' } as KeyboardEvent)"
         >
           <ArrowCircleLeft48Regular />
         </Icon>
         <Icon
-          size="46"
+          size="50"
           @touchstart="handleKeyDown({ key: 'ArrowDown' } as KeyboardEvent)"
         >
           <ArrowCircleDown48Regular />
         </Icon>
         <Icon
-          size="46"
+          size="50"
           @touchstart="handleKeyDown({ key: 'ArrowRight' } as KeyboardEvent)"
         >
           <ArrowCircleRight48Regular />
@@ -319,6 +342,10 @@ onBeforeUnmount(() => {
 
     <div v-if="gameStatus === 'over'" class="mt-10 text-center">
       Game over, Please select the mode again !!!
+    </div>
+
+    <div class="mt-10">
+      Version: 0.0.3
     </div>
   </div>
 </template>
