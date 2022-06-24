@@ -6,8 +6,5 @@
     "source.fixAll.eslint": true
   },
   "editor.detectIndentation": false, // 重置 editor.tabSize属性
-  "editor.tabSize": 2,
-  "[vue]": {
-    "editor.defaultFormatter": "Vue.volar"
-  },
+  "editor.tabSize": 2
 }
