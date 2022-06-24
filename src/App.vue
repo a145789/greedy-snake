@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 import { onBeforeUnmount } from 'vue'
-import HelloWorld from './components/HelloWorld.vue'
+import ArrowCircleUp48Regular from '@vicons/fluent/ArrowCircleUp48Regular'
+import ArrowCircleDown48Regular from '@vicons/fluent/ArrowCircleDown48Regular'
+import ArrowCircleLeft48Regular from '@vicons/fluent/ArrowCircleLeft48Regular'
+import ArrowCircleRight48Regular from '@vicons/fluent/ArrowCircleRight48Regular'
+import { Icon } from '@vicons/utils'
 
 enum SpaceColor {
   food = 'bg-#415065',
@@ -16,6 +20,10 @@ enum Direction {
   right = 'right',
 }
 
+const IS_USE_TOUCH = 'ontouchstart' in document.documentElement
+
+type Mode = 'manual' | 'easyAi'
+
 const snakeBox = $ref(Array.from({ length: 15 }).map(() => Array.from({ length: 15 }).map(() => ({ bg: SpaceColor.empty }))))
 let headPosition = { y: 0, x: 0 }
 
@@ -23,7 +31,11 @@ let bodyPositions = $ref<{ y: number; x: number }[]>([])
 let foodPosition = $ref({ y: 0, x: 0 })
 
 let currentDirection: Direction | null
-let currentStatus: 'manual' | 'auto'
+let currentMode = $ref<Mode>()
+const timer: {
+  [key in Mode]?: number
+} = {}
+let gameStatus = $ref<'pending' | 'playing' | 'over'>('pending')
 
 function genSnake() {
   headPosition = { y: 0, x: 3 }
@@ -61,66 +73,13 @@ function genFood() {
   snakeBox[y][x].bg = SpaceColor.food
 }
 
-function isEatFood() {
-  return headPosition.y === foodPosition.y && headPosition.x === foodPosition.x
-}
-function snakeRun(newHeadY: number, newHeadX: number) {
-  if (!isSpaceNotInSnake(newHeadY, newHeadX)) {
-    gameOver()
-    return
-  }
-
-  snakeBox[newHeadY][newHeadX].bg = SpaceColor.head
-  const { y: oldHeadY, x: oldHeadX } = headPosition
-  headPosition = { y: newHeadY, x: newHeadX }
-
-  snakeBox[oldHeadY][oldHeadX].bg = SpaceColor.body
-  bodyPositions.unshift({ y: oldHeadY, x: oldHeadX })
-  if (isEatFood()) {
-    genFood()
-  } else {
-    const last = bodyPositions.pop()!
-    snakeBox[last.y][last.x].bg = SpaceColor.empty
-  }
-
-  currentStatus === 'manual' ? loopAction() : aiLoopAction()
-}
-
-function isSpaceNotInSnake(y: number, x: number) {
-  return snakeBox[y]?.[x]?.bg === SpaceColor.empty || snakeBox[y]?.[x]?.bg === SpaceColor.food
-}
-
-let timer: number
-function loopAction() {
-  clearInterval(timer)
-  timer = setInterval(() => {
+// 普通模式
+function manualLoopAction() {
+  clearTimeout(timer.manual)
+  timer.manual = setTimeout(() => {
     handle(currentDirection!)
   }, 300)
 }
-function handle(dir: Direction) {
-  let { y, x } = headPosition
-  switch (dir) {
-    case Direction.up:
-      y--
-      break
-    case Direction.down:
-      y++
-      break
-    case Direction.left:
-      x--
-      break
-    case Direction.right:
-      x++
-      break
-    default:
-      break
-  }
-
-  currentDirection = dir
-
-  snakeRun(y, x)
-}
-
 function handleKeyDown(e: KeyboardEvent) {
   let dir: Direction | null
   switch (e.key) {
@@ -154,19 +113,20 @@ function eventHandling(type: 'register' | 'unregister') {
   }
 }
 function manualBeginGame() {
-  init()
-  currentStatus = 'manual'
+  beginGame()
+  currentMode = 'manual'
 
   eventHandling('register')
 }
 
-function aiLoopAction() {
-  clearTimeout(timer)
-  timer = setTimeout(() => {
-    aiEventHandle()
+// easy 模式
+function easyAiLoopAction() {
+  clearTimeout(timer.easyAi)
+  timer.easyAi = setTimeout(() => {
+    easyAiEventHandle()
   }, 300)
 }
-function aiEventHandle() {
+function easyAiEventHandle() {
   const { y, x } = headPosition
   const { y: foodY, x: foodX } = foodPosition
   const arr = []
@@ -217,34 +177,86 @@ function aiEventHandle() {
   handle(dir)
 }
 function aStarBeginGame() {
-  init()
-  currentStatus = 'auto'
-  aiEventHandle()
+  beginGame()
+  currentMode = 'easyAi'
+  easyAiEventHandle()
 }
 
 function gameOver() {
-  currentStatus === 'manual' ? manualBeginGame() : aStarBeginGame()
+  cleanEffect()
+  gameStatus = 'over'
+}
+function handle(dir: Direction) {
+  let { y, x } = headPosition
+  switch (dir) {
+    case Direction.up:
+      y--
+      break
+    case Direction.down:
+      y++
+      break
+    case Direction.left:
+      x--
+      break
+    case Direction.right:
+      x++
+      break
+    default:
+      break
+  }
+
+  currentDirection = dir
+
+  snakeRun(y, x)
+}
+function snakeRun(newHeadY: number, newHeadX: number) {
+  if (!isSpaceNotInSnake(newHeadY, newHeadX)) {
+    gameOver()
+    return
+  }
+
+  snakeBox[newHeadY][newHeadX].bg = SpaceColor.head
+  const { y: oldHeadY, x: oldHeadX } = headPosition
+  headPosition = { y: newHeadY, x: newHeadX }
+
+  snakeBox[oldHeadY][oldHeadX].bg = SpaceColor.body
+  bodyPositions.unshift({ y: oldHeadY, x: oldHeadX })
+  if (isEatFood()) {
+    genFood()
+  } else {
+    const last = bodyPositions.pop()!
+    snakeBox[last.y][last.x].bg = SpaceColor.empty
+  }
+
+  currentMode === 'manual' ? manualLoopAction() : easyAiLoopAction()
 }
 
 function cleanEffect() {
   eventHandling('unregister')
-  clearInterval(timer)
+  clearTimeout(timer.easyAi)
+  clearTimeout(timer.manual)
 }
-
 function initSpace() {
   const spaces = [...bodyPositions, headPosition, foodPosition]
   for (const { y, x } of spaces) {
     snakeBox[y][x].bg = SpaceColor.empty
   }
 }
-
-function init() {
-  cleanEffect()
+function beginGame() {
   initSpace()
   genSnake()
   genFood()
 
+  gameStatus = 'playing'
   currentDirection = null
+}
+
+// utils
+function isEatFood() {
+  return headPosition.y === foodPosition.y && headPosition.x === foodPosition.x
+}
+function isSpaceNotInSnake(y: number, x: number) {
+  return snakeBox[y]?.[x]?.bg === SpaceColor.empty || snakeBox[y]?.[x]?.bg === SpaceColor.food
 }
 
 onBeforeUnmount(() => {
@@ -273,8 +285,40 @@ onBeforeUnmount(() => {
         开始游戏
       </button>
       <button @click="aStarBeginGame">
-        A*算法自动
+        easy 寻路
       </button>
+    </div>
+
+    <div v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH" class="mt-10">
+      <div class="flex justify-center">
+        <Icon size="46" @touchstart="handleKeyDown({ key: 'ArrowUp' } as KeyboardEvent)">
+          <ArrowCircleUp48Regular />
+        </Icon>
+      </div>
+      <div class="flex justify-center">
+        <Icon
+          size="46"
+          @touchstart="handleKeyDown({ key: 'ArrowLeft' } as KeyboardEvent)"
+        >
+          <ArrowCircleLeft48Regular />
+        </Icon>
+        <Icon
+          size="46"
+          @touchstart="handleKeyDown({ key: 'ArrowDown' } as KeyboardEvent)"
+        >
+          <ArrowCircleDown48Regular />
+        </Icon>
+        <Icon
+          size="46"
+          @touchstart="handleKeyDown({ key: 'ArrowRight' } as KeyboardEvent)"
+        >
+          <ArrowCircleRight48Regular />
+        </Icon>
+      </div>
+    </div>
+
+    <div v-if="gameStatus === 'over'" class="mt-10 text-center">
+      Game over, Please select the mode again !!!
     </div>
   </div>
 </template>
