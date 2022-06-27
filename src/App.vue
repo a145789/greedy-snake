@@ -124,14 +124,20 @@ function manualBeginGame() {
   eventHandling('register')
 }
 
+let nextIdx = 0
+let nextPath = []
 // easy 寻路模式
 function easyAiLoopAction() {
+  nextIdx++
+  if (!nextPath[nextIdx]) {
+    easyAiEventHandle()
+  }
   clearTimeout(timer.easyAi)
   timer.easyAi = setTimeout(() => {
-    easyAiEventHandle()
+    handle(nextPath[nextIdx])
   }, 100)
 }
-function easyNavigateAi(start: Position, end: Position, closeList: Position[], obstacleList: Position[]) {
+function easyNavigateAi(start: Position, end: Position, obstacleList: Position[], path: Direction[]) {
   const { y: startY, x: startX } = start
   const { y: endY, x: endX } = end
   const nextList = [
@@ -167,37 +173,39 @@ function easyNavigateAi(start: Position, end: Position, closeList: Position[], o
   }
   const isEndNode = nextList.find(({ distance }) => distance === 0)
   if (isEndNode) {
-    return isEndNode
+    path.push(isEndNode.dir)
+    return path
   }
   nextList.sort((a, b) => b.distance - a.distance)
-
+  const cp = [...nextList]
   let next = nextList.pop()
   while (next) {
-    const { position } = next
-    if (closeList.some(({ y, x }) => y === position.y && x === position.x)) {
-      next = nextList.pop()
-      continue
-    }
-    closeList.push(position)
-    const obstacleListCopy = [...obstacleList]
-    obstacleListCopy.unshift(position)
-    obstacleListCopy.pop()
-    if (easyNavigateAi(position, end, closeList, obstacleListCopy)) {
-      return next
+    const { position, dir } = next
+
+    const nextPath = [...path, dir]
+
+    const obstacleListNext = [...obstacleList]
+    obstacleListNext.unshift({ y: startY, x: startX })
+    obstacleListNext.pop()
+    const pathResult: Direction[] | undefined = easyNavigateAi(position, end, obstacleListNext, nextPath)
+    if (Array.isArray(pathResult)) {
+      return pathResult
     }
     next = nextList.pop()
   }
 }
 function easyAiEventHandle() {
-  const closeList: Position[] = []
+  nextPath = []
+  nextIdx = 0
   const obstacleList = [...bodyPositions]
-  const next = easyNavigateAi(headPosition, foodPosition, closeList, obstacleList)
-  if (!next) {
+  nextPath = easyNavigateAi(headPosition, foodPosition, [...bodyPositions], [])
+
+  if (!nextPath?.length) {
     gameOver()
     return
   }
 
-  handle(next.dir)
+  handle(nextPath[nextIdx])
 }
 function easyNavigateBeginGame() {
   beginGame()
