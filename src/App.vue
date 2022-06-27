@@ -42,6 +42,203 @@ const timer: {
   [key in Mode]?: number
 } = {}
 let gameStatus = $ref<'pending' | 'playing' | 'over'>('pending')
+
+//  主流程
+function computedNextPosition(dir: Direction) {
+  let { y, x } = headPosition
+  switch (dir) {
+    case Direction.up:
+      y--
+      break
+    case Direction.down:
+      y++
+      break
+    case Direction.left:
+      x--
+      break
+    case Direction.right:
+      x++
+      break
+    default:
+      break
+  }
+
+  return { y, x }
+}
+function snakeRun(newHeadY: number, newHeadX: number) {
+  if (!isSpaceNotInSnake(newHeadY, newHeadX)) {
+    gameOver()
+    return
+  }
+
+  snakeBox[newHeadY][newHeadX].bg = SpaceColor.head
+  const { y: oldHeadY, x: oldHeadX } = headPosition
+  headPosition = { y: newHeadY, x: newHeadX }
+
+  snakeBox[oldHeadY][oldHeadX].bg = SpaceColor.body
+  bodyPositions.reverse()
+  bodyPositions.push({ y: oldHeadY, x: oldHeadX })
+  bodyPositions.reverse()
+  if (isEatFood()) {
+    genFood()
+  } else {
+    const last = bodyPositions.pop()!
+    snakeBox[last.y][last.x].bg = SpaceColor.empty
+  }
+}
+function handle(dir: Direction) {
+  const { y, x } = computedNextPosition(dir)
+  currentDirection = dir
+  snakeRun(y, x)
+}
+function beginGameInit() {
+  initSpace()
+  genSnake()
+  genFood()
+
+  gameStatus = 'playing'
+  currentDirection = Direction.null
+}
+function gameOver() {
+  cleanEffect()
+  gameStatus = 'over'
+}
+
+// 普通模式
+function manualBeginGame() {
+  beginGameInit()
+  currentMode = 'manual'
+
+  eventHandling('register')
+}
+function eventHandling(type: 'register' | 'unregister') {
+  if (type === 'register') {
+    window.addEventListener('keydown', keyDownHandling)
+  } else {
+    window.removeEventListener('keydown', keyDownHandling)
+  }
+}
+function keyDownHandling(e: KeyboardEvent) {
+  clearTimeout(timer.manual)
+  let dir: Direction | null
+  switch (e.key) {
+    case 'ArrowUp':
+      dir = Direction.up
+      break
+    case 'ArrowDown':
+      dir = Direction.down
+      break
+    case 'ArrowLeft':
+      dir = Direction.left
+      break
+    case 'ArrowRight':
+      dir = Direction.right
+      break
+    default:
+      dir = Direction.null
+      break
+  }
+
+  if (dir === Direction.null || dir === currentDirection) {
+    return
+  }
+  handle(dir)
+  manualLoopAction()
+}
+function manualLoopAction() {
+  timer.manual = setTimeout(() => {
+    handle(currentDirection)
+  }, 300)
+}
+
+// easy 寻路模式
+async function easyNavigateBeginGame() {
+  beginGameInit()
+  currentMode = 'easyAi'
+  // eslint-disable-next-line no-unmodified-loop-condition
+  while (gameStatus === 'playing') {
+    await easyAiEventHandle()
+  }
+}
+async function easyAiEventHandle() {
+  const obstacleList = [...bodyPositions]
+  const path: Direction[] = []
+  const nextPath = easyNavigateAi(headPosition, foodPosition, obstacleList, path)
+
+  if (!nextPath?.length) {
+    gameOver()
+    return
+  }
+
+  for (const dir of nextPath) {
+    await easyAiLoopAction(dir)
+  }
+}
+function easyAiLoopAction(dir: Direction) {
+  clearTimeout(timer.easyAi)
+
+  return new Promise((resolve) => {
+    timer.easyAi = setTimeout(() => {
+      handle(dir)
+      resolve(null)
+    }, 50)
+  })
+}
+function easyNavigateAi(start: Position, end: Position, obstacleList: Position[], path: Direction[]): Direction[] | undefined {
+  const { y: startY, x: startX } = start
+  const { y: endY, x: endX } = end
+  const nextList = [
+    {
+      position: { y: startY - 1, x: startX },
+      dir: Direction.up,
+      distance: Math.abs(startY - 1 - endY) + Math.abs(startX - endX),
+    },
+    {
+      position: { y: startY + 1, x: startX },
+      dir: Direction.down,
+      distance: Math.abs(startY + 1 - endY) + Math.abs(startX - endX),
+    },
+    {
+      position: { y: startY, x: startX - 1 },
+      dir: Direction.left,
+      distance: Math.abs(startY - endY) + Math.abs(startX - 1 - endX),
+    },
+    {
+      position: { y: startY, x: startX + 1 },
+      dir: Direction.right,
+      distance: Math.abs(startY - endY) + Math.abs(startX + 1 - endX),
+    },
+  ].filter(({ position: { y, x } }) => snakeBox[y]?.[x] && !obstacleList.some(({ y: obstacleY, x: obstacleX }) => obstacleY === y && obstacleX === x))
+
+  if (nextList.length === 0) {
+    return
+  }
+  const isEndNode = nextList.find(({ distance }) => distance === 0)
+  if (isEndNode) {
+    path.push(isEndNode.dir)
+    return path
+  }
+  nextList.sort((a, b) => b.distance - a.distance)
+  let next = nextList.pop()
+  while (next) {
+    const { position, dir } = next
+
+    const nextPath = [...path, dir]
+
+    const obstacleListNext = [...obstacleList]
+    obstacleListNext.reverse()
+    obstacleListNext.push({ y: startY, x: startX })
+    obstacleListNext.reverse()
+    obstacleListNext.pop()
+    const pathResult = easyNavigateAi(position, end, obstacleListNext, nextPath)
+    if (pathResult) {
+      return pathResult
+    }
+    next = nextList.pop()
+  }
+}
+
+// utils
 function genSnake() {
   headPosition = { y: 0, x: 3 }
   snakeBox[headPosition.y][headPosition.x].bg = SpaceColor.head
@@ -77,191 +274,6 @@ function genFood() {
   foodPosition = { y, x }
   snakeBox[y][x].bg = SpaceColor.food
 }
-
-// 普通模式
-function manualLoopAction() {
-  clearTimeout(timer.manual)
-  timer.manual = setTimeout(() => {
-    handle(currentDirection)
-  }, 300)
-}
-function handleKeyDown(e: KeyboardEvent) {
-  let dir: Direction | null
-  switch (e.key) {
-    case 'ArrowUp':
-      dir = Direction.up
-      break
-    case 'ArrowDown':
-      dir = Direction.down
-      break
-    case 'ArrowLeft':
-      dir = Direction.left
-      break
-    case 'ArrowRight':
-      dir = Direction.right
-      break
-    default:
-      dir = Direction.null
-      break
-  }
-
-  if (dir === Direction.null || dir === currentDirection) {
-    return
-  }
-  handle(dir)
-}
-function eventHandling(type: 'register' | 'unregister') {
-  if (type === 'register') {
-    window.addEventListener('keydown', handleKeyDown)
-  } else {
-    window.removeEventListener('keydown', handleKeyDown)
-  }
-}
-function manualBeginGame() {
-  beginGame()
-  currentMode = 'manual'
-
-  eventHandling('register')
-}
-
-let nextIdx = 0
-let nextPath = []
-// easy 寻路模式
-function easyAiLoopAction() {
-  nextIdx++
-  if (!nextPath[nextIdx]) {
-    easyAiEventHandle()
-  }
-  clearTimeout(timer.easyAi)
-  timer.easyAi = setTimeout(() => {
-    handle(nextPath[nextIdx])
-  }, 100)
-}
-function easyNavigateAi(start: Position, end: Position, obstacleList: Position[], path: Direction[]) {
-  const { y: startY, x: startX } = start
-  const { y: endY, x: endX } = end
-  const nextList = [
-    {
-      position: { y: startY - 1, x: startX },
-      dir: Direction.up,
-      distance: Math.abs(startY - 1 - endY) + Math.abs(startX - endX),
-    },
-    {
-      position: { y: startY + 1, x: startX },
-      dir: Direction.down,
-      distance: Math.abs(startY + 1 - endY) + Math.abs(startX - endX),
-    },
-    {
-      position: { y: startY, x: startX - 1 },
-      dir: Direction.left,
-      distance: Math.abs(startY - endY) + Math.abs(startX - 1 - endX),
-    },
-    {
-      position: { y: startY, x: startX + 1 },
-      dir: Direction.right,
-      distance: Math.abs(startY - endY) + Math.abs(startX + 1 - endX),
-    },
-  ].filter(({ position }) => snakeBox[position.y]?.[position.x])
-  for (const { y: obstacleY, x: obstacleX } of obstacleList) {
-    const index = nextList.findIndex(({ position }) => position.y === obstacleY && position.x === obstacleX)
-    if (index !== -1) {
-      nextList.splice(index, 1)
-    }
-  }
-  if (nextList.length === 0) {
-    return
-  }
-  const isEndNode = nextList.find(({ distance }) => distance === 0)
-  if (isEndNode) {
-    path.push(isEndNode.dir)
-    return path
-  }
-  nextList.sort((a, b) => b.distance - a.distance)
-  const cp = [...nextList]
-  let next = nextList.pop()
-  while (next) {
-    const { position, dir } = next
-
-    const nextPath = [...path, dir]
-
-    const obstacleListNext = [...obstacleList]
-    obstacleListNext.unshift({ y: startY, x: startX })
-    obstacleListNext.pop()
-    const pathResult: Direction[] | undefined = easyNavigateAi(position, end, obstacleListNext, nextPath)
-    if (Array.isArray(pathResult)) {
-      return pathResult
-    }
-    next = nextList.pop()
-  }
-}
-function easyAiEventHandle() {
-  nextPath = []
-  nextIdx = 0
-  const obstacleList = [...bodyPositions]
-  nextPath = easyNavigateAi(headPosition, foodPosition, [...bodyPositions], [])
-
-  if (!nextPath?.length) {
-    gameOver()
-    return
-  }
-
-  handle(nextPath[nextIdx])
-}
-function easyNavigateBeginGame() {
-  beginGame()
-  currentMode = 'easyAi'
-  easyAiEventHandle()
-}
-
-function gameOver() {
-  cleanEffect()
-  gameStatus = 'over'
-}
-function handle(dir: Direction) {
-  let { y, x } = headPosition
-  switch (dir) {
-    case Direction.up:
-      y--
-      break
-    case Direction.down:
-      y++
-      break
-    case Direction.left:
-      x--
-      break
-    case Direction.right:
-      x++
-      break
-    default:
-      break
-  }
-
-  currentDirection = dir
-
-  snakeRun(y, x)
-}
-function snakeRun(newHeadY: number, newHeadX: number) {
-  if (!isSpaceNotInSnake(newHeadY, newHeadX)) {
-    gameOver()
-    return
-  }
-
-  snakeBox[newHeadY][newHeadX].bg = SpaceColor.head
-  const { y: oldHeadY, x: oldHeadX } = headPosition
-  headPosition = { y: newHeadY, x: newHeadX }
-
-  snakeBox[oldHeadY][oldHeadX].bg = SpaceColor.body
-  bodyPositions.unshift({ y: oldHeadY, x: oldHeadX })
-  if (isEatFood()) {
-    genFood()
-  } else {
-    const last = bodyPositions.pop()!
-    snakeBox[last.y][last.x].bg = SpaceColor.empty
-  }
-
-  currentMode === 'manual' ? manualLoopAction() : easyAiLoopAction()
-}
-
 function cleanEffect() {
   eventHandling('unregister')
   clearTimeout(timer.easyAi)
@@ -273,16 +285,6 @@ function initSpace() {
     snakeBox[y][x].bg = SpaceColor.empty
   }
 }
-function beginGame() {
-  initSpace()
-  genSnake()
-  genFood()
-
-  gameStatus = 'playing'
-  currentDirection = Direction.null
-}
-
-// utils
 function isEatFood() {
   return headPosition.y === foodPosition.y && headPosition.x === foodPosition.x
 }
@@ -300,6 +302,9 @@ onBeforeUnmount(() => {
     <h2 v-once>
       贪吃蛇
     </h2>
+    <div v-if="gameStatus === 'over'" class="mb-15px text-center text-red-500">
+      Game over, Please select the mode again !!!
+    </div>
 
     <div class="mt-2 w-300px h-300px border-2">
       <div v-for="item, index in snakeBox" :key="index" class="flex">
@@ -322,38 +327,34 @@ onBeforeUnmount(() => {
 
     <div v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH" class="mt-10">
       <div class="flex justify-center">
-        <Icon size="50" @touchstart="handleKeyDown({ key: 'ArrowUp' } as KeyboardEvent)">
+        <Icon size="50" @touchstart="keyDownHandling({ key: 'ArrowUp' } as KeyboardEvent)">
           <ArrowCircleUp48Regular />
         </Icon>
       </div>
       <div class="flex justify-center">
         <Icon
           size="50"
-          @touchstart="handleKeyDown({ key: 'ArrowLeft' } as KeyboardEvent)"
+          @touchstart="keyDownHandling({ key: 'ArrowLeft' } as KeyboardEvent)"
         >
           <ArrowCircleLeft48Regular />
         </Icon>
         <Icon
           size="50"
-          @touchstart="handleKeyDown({ key: 'ArrowDown' } as KeyboardEvent)"
+          @touchstart="keyDownHandling({ key: 'ArrowDown' } as KeyboardEvent)"
         >
           <ArrowCircleDown48Regular />
         </Icon>
         <Icon
           size="50"
-          @touchstart="handleKeyDown({ key: 'ArrowRight' } as KeyboardEvent)"
+          @touchstart="keyDownHandling({ key: 'ArrowRight' } as KeyboardEvent)"
         >
           <ArrowCircleRight48Regular />
         </Icon>
       </div>
     </div>
 
-    <div v-if="gameStatus === 'over'" class="mt-10 text-center">
-      Game over, Please select the mode again !!!
-    </div>
-
     <div class="mt-10">
-      Version: 0.0.3
+      Version: 0.0.4 2022-6-7
     </div>
   </div>
 </template>
