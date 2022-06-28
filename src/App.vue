@@ -161,7 +161,7 @@ async function easyNavigateBeginGame() {
   }
 }
 async function easyAiEventHandle() {
-  const obstacleList = [...bodyPositions]
+  const obstacleList = bodyPositions.slice()
   const path: Direction[] = []
   const nextPath = easyNavigateAi(headPosition, foodPosition, obstacleList, path)
 
@@ -219,18 +219,20 @@ function easyNavigateAi(start: Position, end: Position, obstacleList: Position[]
     return path
   }
   nextList.sort((a, b) => b.distance - a.distance)
+
+  obstacleList.reverse()
+  obstacleList.push({ y: startY, x: startX })
+  obstacleList.reverse()
+  obstacleList.pop()
+
   let next = nextList.pop()
   while (next) {
     const { position, dir } = next
 
-    const nextPath = [...path, dir]
+    const nextPath = path.slice()
+    nextPath.push(dir)
 
-    const obstacleListNext = [...obstacleList]
-    obstacleListNext.reverse()
-    obstacleListNext.push({ y: startY, x: startX })
-    obstacleListNext.reverse()
-    obstacleListNext.pop()
-    const pathResult = easyNavigateAi(position, end, obstacleListNext, nextPath)
+    const pathResult = easyNavigateAi(position, end, obstacleList.slice(), nextPath)
     if (pathResult) {
       return pathResult
     }
