@@ -142,12 +142,14 @@ function keyDownHandling(e: KeyboardEvent) {
     return
   }
   clearTimeout(timer.manual)
+
   handle(dir)
   manualLoopAction()
 }
 function manualLoopAction() {
   timer.manual = setTimeout(() => {
     handle(currentDirection)
+    manualLoopAction()
   }, 300)
 }
 
