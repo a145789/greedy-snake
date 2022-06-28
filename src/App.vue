@@ -119,7 +119,6 @@ function eventHandling(type: 'register' | 'unregister') {
   }
 }
 function keyDownHandling(e: KeyboardEvent) {
-  clearTimeout(timer.manual)
   let dir: Direction | null
   switch (e.key) {
     case 'ArrowUp':
@@ -142,6 +141,7 @@ function keyDownHandling(e: KeyboardEvent) {
   if (dir === Direction.null || dir === currentDirection) {
     return
   }
+  clearTimeout(timer.manual)
   handle(dir)
   manualLoopAction()
 }
