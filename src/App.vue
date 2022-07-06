@@ -1,10 +1,6 @@
 <script lang="ts" setup>
+import vTouchdir from "vtouchdir"
 import { onBeforeUnmount } from 'vue'
-import ArrowCircleUp48Regular from '@vicons/fluent/ArrowCircleUp48Regular'
-import ArrowCircleDown48Regular from '@vicons/fluent/ArrowCircleDown48Regular'
-import ArrowCircleLeft48Regular from '@vicons/fluent/ArrowCircleLeft48Regular'
-import ArrowCircleRight48Regular from '@vicons/fluent/ArrowCircleRight48Regular'
-import { Icon } from '@vicons/utils'
 
 interface Position {
   y: number
@@ -138,7 +134,7 @@ function keyDownHandling(e: KeyboardEvent) {
       break
   }
 
-  if (dir === Direction.null || dir === currentDirection) {
+  if (dir === Direction.null || isReverseDir(dir) || dir === currentDirection) {
     return
   }
   clearTimeout(timer.manual)
@@ -151,6 +147,24 @@ function manualLoopAction() {
     handle(currentDirection)
     manualLoopAction()
   }, 300)
+}
+function touchHandler(dir: Direction) {
+  switch (dir) {
+    case Direction.up:
+      keyDownHandling({ key: 'ArrowUp' } as KeyboardEvent)
+      break;
+    case Direction.down:
+      keyDownHandling({ key: 'ArrowDown' } as KeyboardEvent)
+      break;
+    case Direction.left:
+      keyDownHandling({ key: 'ArrowLeft' } as KeyboardEvent)
+      break;
+    case Direction.right:
+      keyDownHandling({ key: 'ArrowRight' } as KeyboardEvent)
+      break;
+    default:
+      break;
+  }
 }
 
 // easy 寻路模式
@@ -295,6 +309,12 @@ function isEatFood() {
 function isSpaceNotInSnake(y: number, x: number) {
   return snakeBox[y]?.[x]?.bg === SpaceColor.empty || snakeBox[y]?.[x]?.bg === SpaceColor.food
 }
+function isReverseDir(dir: Direction) {
+  return currentDirection === Direction.up && dir === Direction.down ||
+    currentDirection === Direction.down && dir === Direction.up ||
+    currentDirection === Direction.left && dir === Direction.right ||
+    currentDirection === Direction.right && dir === Direction.left
+}
 
 onBeforeUnmount(() => {
   cleanEffect()
@@ -329,36 +349,14 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH" class="mt-10">
-      <div class="flex justify-center">
-        <Icon size="50" @touchstart="keyDownHandling({ key: 'ArrowUp' } as KeyboardEvent)">
-          <ArrowCircleUp48Regular />
-        </Icon>
-      </div>
-      <div class="flex justify-center">
-        <Icon
-          size="50"
-          @touchstart="keyDownHandling({ key: 'ArrowLeft' } as KeyboardEvent)"
-        >
-          <ArrowCircleLeft48Regular />
-        </Icon>
-        <Icon
-          size="50"
-          @touchstart="keyDownHandling({ key: 'ArrowDown' } as KeyboardEvent)"
-        >
-          <ArrowCircleDown48Regular />
-        </Icon>
-        <Icon
-          size="50"
-          @touchstart="keyDownHandling({ key: 'ArrowRight' } as KeyboardEvent)"
-        >
-          <ArrowCircleRight48Regular />
-        </Icon>
-      </div>
+    <div v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH"
+      class="mt-15px w-200px h-130px border-2px touch-filter text-center leading-130px"
+      v-touchdir.prevent="touchHandler">
+      触摸我
     </div>
 
-    <div class="mt-10">
-      Version: 0.0.4 2022-6-7
+    <div class="mt-15px">
+      Version: 0.0.5
     </div>
   </div>
 </template>
@@ -369,5 +367,9 @@ body,
 #app {
   height: 100%;
   width: 100%;
+}
+
+.touch-filter {
+  filter: drop-shadow(16px 16px 20px gray) invert(75%);
 }
 </style>
