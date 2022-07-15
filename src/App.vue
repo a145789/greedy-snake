@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import vTouchdir from "vtouchdir"
+import vTouchdir from 'vtouchdir'
 import { onBeforeUnmount } from 'vue'
 
 interface Position {
@@ -26,7 +26,11 @@ const IS_USE_TOUCH = 'ontouchstart' in document.documentElement
 
 type Mode = 'manual' | 'easyAi'
 
-const snakeBox = $ref(Array.from({ length: 15 }).map(() => Array.from({ length: 15 }).map(() => ({ bg: SpaceColor.empty }))))
+const snakeBox = $ref(
+  Array.from({ length: 15 }).map(() =>
+    Array.from({ length: 15 }).map(() => ({ bg: SpaceColor.empty })),
+  ),
+)
 let headPosition = { y: 0, x: 0 }
 
 let bodyPositions = $ref<Position[]>([])
@@ -152,18 +156,18 @@ function touchHandler(dir: Direction) {
   switch (dir) {
     case Direction.up:
       keyDownHandling({ key: 'ArrowUp' } as KeyboardEvent)
-      break;
+      break
     case Direction.down:
       keyDownHandling({ key: 'ArrowDown' } as KeyboardEvent)
-      break;
+      break
     case Direction.left:
       keyDownHandling({ key: 'ArrowLeft' } as KeyboardEvent)
-      break;
+      break
     case Direction.right:
       keyDownHandling({ key: 'ArrowRight' } as KeyboardEvent)
-      break;
+      break
     default:
-      break;
+      break
   }
 }
 
@@ -179,7 +183,12 @@ async function easyNavigateBeginGame() {
 async function easyAiEventHandle() {
   const obstacleList = bodyPositions.slice()
   const path: Direction[] = []
-  const nextPath = easyNavigateAi(headPosition, foodPosition, obstacleList, path)
+  const nextPath = easyNavigateAi(
+    headPosition,
+    foodPosition,
+    obstacleList,
+    path,
+  )
 
   if (!nextPath?.length) {
     gameOver()
@@ -200,7 +209,12 @@ function easyAiLoopAction(dir: Direction) {
     }, 50)
   })
 }
-function easyNavigateAi(start: Position, end: Position, obstacleList: Position[], path: Direction[]): Direction[] | undefined {
+function easyNavigateAi(
+  start: Position,
+  end: Position,
+  obstacleList: Position[],
+  path: Direction[],
+): Direction[] | undefined {
   const { y: startY, x: startX } = start
   const { y: endY, x: endX } = end
   const nextList = [
@@ -224,7 +238,13 @@ function easyNavigateAi(start: Position, end: Position, obstacleList: Position[]
       dir: Direction.right,
       distance: Math.abs(startY - endY) + Math.abs(startX + 1 - endX),
     },
-  ].filter(({ position: { y, x } }) => snakeBox[y]?.[x] && !obstacleList.some(({ y: obstacleY, x: obstacleX }) => obstacleY === y && obstacleX === x))
+  ].filter(
+    ({ position: { y, x } }) =>
+      snakeBox[y]?.[x]
+      && !obstacleList.some(
+        ({ y: obstacleY, x: obstacleX }) => obstacleY === y && obstacleX === x,
+      ),
+  )
 
   if (nextList.length === 0) {
     return
@@ -248,7 +268,12 @@ function easyNavigateAi(start: Position, end: Position, obstacleList: Position[]
     const nextPath = path.slice()
     nextPath.push(dir)
 
-    const pathResult = easyNavigateAi(position, end, obstacleList.slice(), nextPath)
+    const pathResult = easyNavigateAi(
+      position,
+      end,
+      obstacleList.slice(),
+      nextPath,
+    )
     if (pathResult) {
       return pathResult
     }
@@ -307,13 +332,18 @@ function isEatFood() {
   return headPosition.y === foodPosition.y && headPosition.x === foodPosition.x
 }
 function isSpaceNotInSnake(y: number, x: number) {
-  return snakeBox[y]?.[x]?.bg === SpaceColor.empty || snakeBox[y]?.[x]?.bg === SpaceColor.food
+  return (
+    snakeBox[y]?.[x]?.bg === SpaceColor.empty
+    || snakeBox[y]?.[x]?.bg === SpaceColor.food
+  )
 }
 function isReverseDir(dir: Direction) {
-  return currentDirection === Direction.up && dir === Direction.down ||
-    currentDirection === Direction.down && dir === Direction.up ||
-    currentDirection === Direction.left && dir === Direction.right ||
-    currentDirection === Direction.right && dir === Direction.left
+  return (
+    (currentDirection === Direction.up && dir === Direction.down)
+    || (currentDirection === Direction.down && dir === Direction.up)
+    || (currentDirection === Direction.left && dir === Direction.right)
+    || (currentDirection === Direction.right && dir === Direction.left)
+  )
 }
 
 onBeforeUnmount(() => {
@@ -331,7 +361,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="mt-2 w-300px h-300px border-2">
-      <div v-for="item, index in snakeBox" :key="index" class="flex">
+      <div v-for="(item, index) in snakeBox" :key="index" class="flex">
         <div v-for="({ bg }, idx) in item" :key="idx" class="w-20px h-20px" :class="bg" />
       </div>
     </div>
@@ -349,9 +379,10 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH"
+    <div
+      v-if="currentMode === 'manual' && gameStatus === 'playing' && IS_USE_TOUCH" v-touchdir.prevent="touchHandler"
       class="mt-15px w-200px h-130px border-2px touch-filter text-center leading-130px"
-      v-touchdir.prevent="touchHandler">
+    >
       触摸我
     </div>
 
